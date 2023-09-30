@@ -1,0 +1,44 @@
+db.runCommand({ enableSharding: "ecommerce"})
+
+sh.enableSharding("ecommerce")
+sh.shardCollection("ecommerce.products",{"_id":"hashed"})
+
+db.products.insert({
+  "name": "New product",
+  "price": 29.99,
+  "description": "A flexible MangoDB example",
+  "newField": "This is a new field"
+})
+
+db.orders.aggregate([
+  {
+    $lookup: {
+      from: "product_id",
+      foriengField: "_id",
+      as: "product"
+    }
+  },
+  {
+    $unwind: "$product"
+  },
+  {
+    $group: {
+      _id: "$product.category",
+      totalSakes: { $sum: "$product.price"}
+    }
+  }
+  }])
+  
+  const session = db.getMongo().startSession();
+  session.startTransction();
+  
+  try{
+    db.customers.updateone({_id: customerId}, { $inc: {balance: -orderTotal}}, { session});
+    
+    session.commitTransaction();
+    session.endSession();
+  } catch(error) {
+    session.abortTransaction();
+    session.endSession();
+    print("Transaction aborted:", error);
+  }
